@@ -1,3 +1,4 @@
+######################################################################
 # Copyright 2016, 2023 John Rofrano. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the 'License');
@@ -11,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+######################################################################
 
 """
 Models for Product Demo Service
@@ -32,12 +34,11 @@ import logging
 from enum import Enum
 from decimal import Decimal
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
+
+# Import db from service package to avoid circular import
+from service import db
 
 logger = logging.getLogger("flask.app")
-
-# Create the SQLAlchemy object to be initialized later in init_db()
-db = SQLAlchemy()
 
 
 def init_db(app):
@@ -92,7 +93,6 @@ class Product(db.Model):
         Creates a Product to the database
         """
         logger.info("Creating %s", self.name)
-        # id must be none to generate next primary key
         self.id = None  # pylint: disable=invalid-name
         db.session.add(self)
         db.session.commit()
@@ -120,7 +120,7 @@ class Product(db.Model):
             "description": self.description,
             "price": str(self.price),
             "available": self.available,
-            "category": self.category.name  # convert enum to string
+            "category": self.category.name,  # convert enum to string
         }
 
     def deserialize(self, data: dict):
@@ -137,8 +137,7 @@ class Product(db.Model):
                 self.available = data["available"]
             else:
                 raise DataValidationError(
-                    "Invalid type for boolean [available]: "
-                    + str(type(data["available"]))
+                    "Invalid type for boolean [available]: " + str(type(data["available"]))
                 )
             self.category = getattr(Category, data["category"])  # create enum from string
         except AttributeError as error:
@@ -164,10 +163,9 @@ class Product(db.Model):
 
         """
         logger.info("Initializing database")
-        # This is where we initialize SQLAlchemy from the Flask app
         db.init_app(app)
         app.app_context().push()
-        db.create_all()  # make our sqlalchemy tables
+        db.create_all()
 
     @classmethod
     def all(cls) -> list:
@@ -201,7 +199,7 @@ class Product(db.Model):
 
         """
         logger.info("Processing name query for %s ...", name)
-        return cls.query.filter(cls.name == name)
+        return cls.query.filter(cls.name == name).all()
 
     @classmethod
     def find_by_price(cls, price: Decimal) -> list:
@@ -218,32 +216,32 @@ class Product(db.Model):
         price_value = price
         if isinstance(price, str):
             price_value = Decimal(price.strip(' "'))
-        return cls.query.filter(cls.price == price_value)
+        return cls.query.filter(cls.price == price_value).all()
 
     @classmethod
     def find_by_availability(cls, available: bool = True) -> list:
         """Returns all Products by their availability
 
         :param available: True for products that are available
-        :type available: str
+        :type available: bool
 
         :return: a collection of Products that are available
         :rtype: list
 
         """
         logger.info("Processing available query for %s ...", available)
-        return cls.query.filter(cls.available == available)
+        return cls.query.filter(cls.available == available).all()
 
     @classmethod
     def find_by_category(cls, category: Category = Category.UNKNOWN) -> list:
         """Returns all Products by their Category
 
-        :param category: values are ['MALE', 'FEMALE', 'UNKNOWN']
-        :type available: enum
+        :param category: values are ['UNKNOWN', 'CLOTHS', 'FOOD', 'HOUSEWARES', 'AUTOMOTIVE', 'TOOLS']
+        :type category: Category enum
 
         :return: a collection of Products that are available
         :rtype: list
 
         """
         logger.info("Processing category query for %s ...", category.name)
-        return cls.query.filter(cls.category == category)
+        return cls.query.filter(cls.category == category).all()

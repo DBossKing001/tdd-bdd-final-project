@@ -21,22 +21,23 @@ Package for the application models and service routes
 This module creates and configures the Flask app and sets up the logging
 and SQL database
 """
+
 import sys
 from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 from service import config
 from service.common import log_handlers
 
-# NOTE: Do not change the order of this code
-# The Flask app must be created
-# BEFORE you import modules that depend on it !!!
-
-# Create the Flask aoo
+# Create the Flask app
 app = Flask(__name__)  # pylint: disable=invalid-name
 
 # Load Configurations
 app.config.from_object(config)
 
-# Dependencies require we import the routes AFTER the Flask app is created
+# Initialize SQLAlchemy
+db = SQLAlchemy(app)
+
+# Dependencies require we import the routes and models AFTER the Flask app and db are created
 # pylint: disable=wrong-import-position, wrong-import-order, cyclic-import
 from service import routes, models        # noqa: F401, E402
 from service.common import error_handlers, cli_commands  # noqa: F401, E402
